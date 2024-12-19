@@ -44,11 +44,9 @@ createAppKit({
 })
 
 export function AppKitProvider({ children }: any) {
-    const modal = useAppKit()
     return (
         <WagmiProvider config={wagmiAdapter.wagmiConfig}>
-            <QueryClientProvider client={queryClient}>
-                <button onClick={() => modal.open()}>Connect Wallet</button>
+            <QueryClientProvider client={queryClient}>{children}
             </QueryClientProvider>
         </WagmiProvider>
     )
