@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
 import {
     createAppKit,
-    useAppKit,
 } from '@reown/appkit/react'
 // 0. Setup queryClient
 const queryClient = new QueryClient()
@@ -28,7 +27,6 @@ const networks = [mainnet, arbitrum, base]
 const wagmiAdapter = new WagmiAdapter({
     networks,
     projectId,
-    ssr: true
 });
 
 // 5. Create modal
