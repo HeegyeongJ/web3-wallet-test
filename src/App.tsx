@@ -5,6 +5,7 @@ import {AppKitProvider} from "./context";
 import {ethers} from "ethers";
 import EthereumProvider from "@walletconnect/ethereum-provider";
 import {useAppKit, useAppKitAccount, useAppKitTheme} from "@reown/appkit/react";
+import {useSignMessage, useSignTypedData} from "wagmi";
 const projectId = 'd13d662b32dcf743f8f79327adc3d18c';
 
 
@@ -76,8 +77,11 @@ function App() {
     //     }
     //     return <button onClick={connect}>Connect with ethereum-provider</button>;
     // }
+    const {signMessageAsync} = useSignMessage()
+    const {signTypedData} = useSignTypedData()
+
     const appkit = useAppKit()
-    appkit.open()
+
     const {setThemeMode, setThemeVariables} = useAppKitTheme()
     setThemeMode('light')
     setThemeVariables({
@@ -88,7 +92,42 @@ function App() {
     <div className="App">
       {/* eslint-disable-next-line react/jsx-no-undef */}
         <AppKitProvider>
-            <button>click</button>
+            <button onClick={() => {
+                try{
+                    console.log(1111)
+                signTypedData({
+                    types: {
+                        Person: [
+                            {name: 'name', type: 'string'},
+                            {name: 'wallet', type: 'address'},
+                        ],
+                        Mail: [
+                            {name: 'from', type: 'Person'},
+                            {name: 'to', type: 'Person'},
+                            {name: 'contents', type: 'string'},
+                        ],
+                    },
+                    primaryType: 'Mail',
+                    message: {
+                        from: {
+                            name: 'Cow',
+                            wallet: '0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826',
+                        },
+                        to: {
+                            name: 'Bob',
+                            wallet: '0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB',
+                        },
+                        contents: 'Hello, Bob!',
+                    },
+                })}
+                catch(e) {
+                    console.log(2222)
+                    console.log(e)
+                }
+            }
+            }>Sign Typed Data</button>
+            <button onClick={async() => await signMessageAsync({message: 'hellooooooo'})}>Sign Message</button>
+            <button onClick={() =>   appkit.open()}>click</button>
         </AppKitProvider>
         <header className="App-header">
             <img src={logo} className="App-logo" alt="logo" />
