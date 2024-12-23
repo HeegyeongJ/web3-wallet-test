@@ -1,11 +1,12 @@
 import React from 'react'
-import { WagmiProvider } from 'wagmi'
+import {WagmiConfig, WagmiProvider} from 'wagmi'
 import { mainnet, arbitrum, base, scroll, polygon } from '@reown/appkit/networks'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
 import {
     createAppKit,
 } from '@reown/appkit/react'
+import {sepolia} from "@wagmi/core/chains";
 // 0. Setup queryClient
 const queryClient = new QueryClient()
 
@@ -21,7 +22,7 @@ const metadata = {
 }
 
 // 3. Set the networks
-const networks = [mainnet, arbitrum, base]
+const networks = [mainnet, arbitrum, base, sepolia]
 
 // 4. Create Wagmi Adapter
 const wagmiAdapter = new WagmiAdapter({
@@ -36,9 +37,6 @@ createAppKit({
     networks,
     projectId,
     metadata,
-    features: {
-        analytics: true // Optional - defaults to your Cloud configuration
-    }
 })
 
 export function AppKitProvider({ children }: any) {

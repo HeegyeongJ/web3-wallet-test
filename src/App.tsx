@@ -5,7 +5,7 @@ import {AppKitProvider} from "./context";
 import {ethers} from "ethers";
 import EthereumProvider from "@walletconnect/ethereum-provider";
 import {useAppKit, useAppKitAccount, useAppKitTheme} from "@reown/appkit/react";
-import {useSignMessage, useSignTypedData} from "wagmi";
+import {useDisconnect, useSignMessage, useSignTypedData, useChainId} from "wagmi";
 const projectId = 'd13d662b32dcf743f8f79327adc3d18c';
 
 
@@ -13,7 +13,7 @@ const projectId = 'd13d662b32dcf743f8f79327adc3d18c';
 function App() {
     // const [provider, setProvider] = useState<any>()
     // const [connected, setConnected] = useState(false);
-    // const [balance, setBalance] = useState<string | null>(null);
+    // const [balance, setBalance] = useState<any>();
     // const initProvider  = async () => {
     //     const provider =  await EthereumProvider.init({
     //         projectId,
@@ -50,13 +50,12 @@ function App() {
     //
     //
     //     // 4. Fetch Balance on click with ethers.js
-    //     // const getBalance = async () => {
-    //     //     const balanceFromEthers = await ethersWeb3Provider
-    //     //         .getSigner(provider.accounts[0])
-    //     //         .getBalance();
-    //     //     const remainder = balanceFromEthers.mod(1e14);
-    //     //     setBalance(ethers.utils.formatEther(balanceFromEthers.sub(remainder)));
-    //     // };
+    //     const getBalance = async () => {
+    //         const balanceFromEthers = await ethersWeb3Provider
+    //             .getBalance(provider.accounts[0])
+    //         // const remainder =  await balanceFromEthers.mod(1e14);
+    //         setBalance(balanceFromEthers);
+    //     };
     //
     //     // 5. Handle Disconnect
     //     const refresh = () => {
@@ -67,7 +66,7 @@ function App() {
     //     if (connected) {
     //         return (
     //             <>
-    //                 {/*<button onClick={getBalance}>Balance</button>*/}
+    //                 <button onClick={getBalance}>Balance</button>
     //                 <button onClick={refresh}>Refresh</button>
     //                 <p>
     //                     balance: {balance ? `${balance} ETH` : `click "Balance" to fetch`}
@@ -78,23 +77,20 @@ function App() {
     //     return <button onClick={connect}>Connect with ethereum-provider</button>;
     // }
     const {signMessageAsync} = useSignMessage()
-    const {signTypedData} = useSignTypedData()
+    const {signTypedData, failureReason} = useSignTypedData()
 
     const appkit = useAppKit()
-
-    const {setThemeMode, setThemeVariables} = useAppKitTheme()
-    setThemeMode('light')
-    setThemeVariables({
-        '--w3m-color-mix': '#00BB7F',
-    })
+    const {disconnect, error: isError} = useDisconnect()
+    const chainId = useChainId()
+    console.log('wagmi chainId', chainId)
+    console.log('current chainId', window.ethereum?.chainId)
+    console.log('failReason', failureReason)
 
   return (
     <div className="App">
       {/* eslint-disable-next-line react/jsx-no-undef */}
         <AppKitProvider>
             <button onClick={() => {
-                try{
-                    console.log(1111)
                 signTypedData({
                     types: {
                         Person: [
@@ -119,13 +115,9 @@ function App() {
                         },
                         contents: 'Hello, Bob!',
                     },
-                })}
-                catch(e) {
-                    console.log(2222)
-                    console.log(e)
-                }
-            }
-            }>Sign Typed Data</button>
+                })
+            }}>Sign Typed Data</button>
+        <button onClick={async () => await disconnect}>disconnect</button>
             <button onClick={async() => await signMessageAsync({message: 'hellooooooo'})}>Sign Message</button>
             <button onClick={() =>   appkit.open()}>click</button>
         </AppKitProvider>
