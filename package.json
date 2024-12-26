@@ -12,19 +12,20 @@
     "@web3-onboard/core": "^2.23.0",
     "@web3-onboard/injected-wallets": "^2.11.2",
     "@web3-onboard/react": "^2.10.0",
+    "@web3-onboard/wagmi": "^2.0.1",
     "cra-template-typescript": "1.2.0",
     "ethers": "^6.13.4",
     "react": "^19.0.0",
+    "react-app-rewired": "^2.2.1",
     "react-dom": "^19.0.0",
     "react-scripts": "5.0.1",
     "viem": "^2.21.55",
     "wagmi": "^2.14.3"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "start": "react-app-rewired start",
+    "build": "react-app-rewired build",
+    "test": "react-app-rewired test"
   },
   "eslintConfig": {
     "extends": [
@@ -49,7 +50,20 @@
     "@types/jest": "^29.5.14",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
+    "assert": "^2.1.0",
+    "browserify-zlib": "^0.2.0",
+    "buffer": "^6.0.3",
+    "crypto-browserify": "^3.12.1",
+    "https-browserify": "^1.0.0",
+    "os-browserify": "^0.3.0",
+    "path-browserify": "^1.0.1",
+    "process": "^0.11.10",
+    "rollup-plugin-polyfill-node": "^0.13.0",
+    "stream-browserify": "^3.0.0",
+    "stream-http": "^3.2.0",
     "typescript": "^5.7.2",
-    "web-vitals": "^4.2.4"
+    "util": "^0.12.5",
+    "web-vitals": "^4.2.4",
+    "webpack-bundle-analyzer": "^4.10.2"
   }
 }
