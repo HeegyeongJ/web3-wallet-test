@@ -29,23 +29,11 @@ const Coinbase = () => {
     };
 
     return (
-        <div style={{ textAlign: 'center', marginTop: '50px' }}>
-            <h1>Coinbase Wallet Connect</h1>
+        <div>
             {account ? (
                 <p>Connected Account: {account}</p>
             ) : (
-                <button
-                    onClick={connectWallet}
-                    style={{
-                        padding: '10px 20px',
-                        fontSize: '16px',
-                        backgroundColor: '#0052ff',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '5px',
-                        cursor: 'pointer',
-                    }}
-                >
+                <button onClick={() => connectWallet()}>
                     Connect Coinbase Wallet
                 </button>
             )}
