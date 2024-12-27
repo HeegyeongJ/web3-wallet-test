@@ -1,31 +1,29 @@
 import React, {useEffect, useState} from 'react';
-import logo from './logo.svg';
 import './App.css';
-import {AppKitProvider} from "./context";
-import {MetaMaskProvider} from "@metamask/sdk-react";
-import Test from "./Test";
-import Coinbase from "./Coinbase";
-const projectId = 'd13d662b32dcf743f8f79327adc3d18c';
+import {ethers} from "ethers";
 
 
 
 function App() {
+    const connectWallet = async () => {
+     if(window.ethereum){
+         try{
 
+         const ethereumProvider = window as any
+         console.log(ethereumProvider.coinbaseWalletExtension)
+         await ethereumProvider.request({
+             method: "eth_requestAccounts",
+         })
+         }catch (e){
+             console.log(e)
+         }
+     }
+    }
 
   return (
-      <MetaMaskProvider
-          sdkOptions={{
-              dappMetadata: {
-                  name: "Example React Dapp",
-                  url: window.location.href,
-              },
-              infuraAPIKey: process.env.INFURA_API_KEY,
-              // Other options.
-          }}
-      >
-          <Test/>
-          <Coinbase/>
-      </MetaMaskProvider>
+      <div>
+        <button onClick={() => connectWallet()}>click</button>
+      </div>
   );
 }
 
