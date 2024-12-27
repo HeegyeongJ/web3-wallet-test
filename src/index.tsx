@@ -7,16 +7,26 @@ import {init, Web3OnboardProvider} from "@web3-onboard/react";
 import coinbaseWalletModule from "@web3-onboard/coinbase";
 import wagmi from '@web3-onboard/wagmi'
 import Onboard from '@web3-onboard/core'
+import metamaskSDK from '@web3-onboard/metamask'
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
 
 const coinbaseWalletSdk = coinbaseWalletModule()
+const metamaskSDKWallet = metamaskSDK({options: {
+        extensionOnly: false,
+        dappMetadata: {
+            name: 'Demo Web3Onboard'
+        }
+    }})
+
+
+
 const INFURA_KEY = '2896ff3d0a1143689424a8341cb75c67'
 const web3Onboard = Onboard({
     wagmi,
-    wallets:[coinbaseWalletSdk],
+    wallets:[coinbaseWalletSdk, metamaskSDKWallet],
     chains: [
         {
             // hex encoded string, eg '0x1' for Ethereum Mainnet
