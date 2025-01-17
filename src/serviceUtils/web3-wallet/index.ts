@@ -3,6 +3,7 @@ import {ChainInfo, DetectedWalletList} from "./index.type";
 
 const web3 = new Web3();
 
+// EVM 기반의 MetaMask, Coinbase, Trust wallet을 바탕으로 만든 모듈
 class Web3EthereumWallet {
     walletName: string | null;
     web3: Web3 | null;
@@ -31,7 +32,7 @@ class Web3EthereumWallet {
         let wallets: any[] = []
         await Web3.requestEIP6963Providers().then(async (res) => {
             for (const [key, value] of res) {
-                wallets.push(value.info)
+                wallets.push(value)
             }
         })
         return wallets
@@ -60,30 +61,18 @@ class Web3EthereumWallet {
         })
     }
 
-    async connect(walletName: DetectedWalletList["name"]) {
+    async connect(wallet: DetectedWalletList) {
         try {
-            let wallet: any[] = []
-            await Web3.requestEIP6963Providers().then(async (res) => {
-                for (const [key, value] of res) {
-                    if (value.info.name === walletName) {
-                        wallet.push(value.info.name)
-                        this.web3 = new Web3(value.provider);
-                        this.walletName = value.info.name;
-                    }
-                }
-            })
-            if (wallet.length === 0) {
-                throw new Error("no installed wallet found");
-            }
-            if (this.web3) {
-                const result = await this.web3?.eth.requestAccounts() as string[]
-                const chainId = await this.web3?.eth.getChainId()
-                this.chainId = chainId?.toString() as string
-                this.account.address = result[0];
-                this.detectAccountChanged()
-                this.detectChainChanged()
-                return {address: this.account.address, chainId: this.chainId, walletName: this.walletName};
-            }
+            this.web3 = new Web3(wallet.provider)
+            const result = await this.web3?.eth.requestAccounts() as string[]
+            const chainId = await this.web3?.eth.getChainId()
+            this.chainId = chainId?.toString() as string
+            this.walletName = wallet.info.name
+            this.account.address = result[0];
+            console.log(result[0])
+            this.detectAccountChanged()
+            this.detectChainChanged()
+            return {address: this.account.address, chainId: this.chainId, walletName: this.walletName};
         } catch (e) {
             console.error(e)
         }
@@ -92,7 +81,7 @@ class Web3EthereumWallet {
     async disconnect() {
         if (this.web3) {
             try {
-                this.web3?.provider?.request({
+                await this.web3?.provider?.request({
                     method: "wallet_revokePermissions",
                     params: [
                         {
@@ -103,7 +92,13 @@ class Web3EthereumWallet {
                 this.initialize()
                 return true
             } catch (e) {
-                this.web3.provider?.disconnect()
+                try {
+                    this.web3.provider?.disconnect()
+                    this.initialize()
+                    return true
+                } catch (disconnectError) {
+                    throw new Error(disconnectError as any)
+                }
             }
         }
         throw new Error('not connected any wallet')
@@ -181,14 +176,14 @@ class Web3EthereumWallet {
     }
 
 
-    getChainId() {
+    getCurrentChainId() {
         if (this.web3) {
             return this.chainId
         }
         throw new Error('not connected any wallet')
     }
 
-    async changeChainId(chainId: string) {
+    async changeEthereumChainById(chainId: string) {
         try {
             await this.web3?.provider?.request({
                 method: 'wallet_switchEthereumChain',

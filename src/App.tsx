@@ -3,7 +3,7 @@ import './App.css';
 import {ethers} from "ethers";
 import {Web3} from "web3";
 import {Account} from "viem";
-import {web3Wallet} from "./serviceUtils/web3-wallet";
+import {web3EthereumWallet} from "./serviceUtils/web3-wallet";
 
 
 function App() {
@@ -97,7 +97,7 @@ function App() {
             //
             //     await web3.currentProvider.disconnect()
             // }
-            await web3Wallet.disconnect()
+            await web3EthereumWallet.disconnect()
             // const result = await provider.request({
             //     method: "wallet_revokePermissions",
             //     params: [
@@ -137,42 +137,58 @@ function App() {
     }
 
     const onSigning = async () => {
-        const result = await web3?.eth.personal.sign('bye', account, '')
+        // const result = await web3?.eth.personal.sign('bye', account, '')
+        console.log('ac', account)
+        const result = await web3EthereumWallet.signMessage('aaaaaaa', account)
         console.log(result)
     }
 
     const changeChain = async () => {
         const result = await web3.currentProvider.request({
             method: 'wallet_switchEthereumChain',
-            params: [{chainId: web3.utils.toHex(43114)}]
+            // params: [{chainId: web3.utils.toHex(43114)}]
+            params: [{chainId: new Web3().utils.toHex(1)}]
         })
+        console.log(result)
+    }
+
+    const getDetectedWallets = async () => {
+        const result = await web3EthereumWallet.getAvailableWallets()
         console.log(result)
     }
 
     useEffect(() => {
         getBalance()
+        getDetectedWallets()
     }, [account]);
 
+    const connectWallet = async (name: string) => {
+        const result = await web3EthereumWallet.getAvailableWallets()
+        const compareName = name.trim().toLowerCase()
+        result.map(async (item) => {
+            if (item.info.name.trim().toLowerCase().includes(compareName)) {
+                const connect = await web3EthereumWallet.connect(item)
+                setAccount(connect?.address)
+            }
+        })
+    }
     return (
         <div>
             <button onClick={async () => {
                 // connectMetaMask()
-                const result = await web3Wallet.getAvailableWallets()
-                result.map(async (item) => {
-                    if (item.name === 'MetaMask') {
-                        await web3Wallet.connect(item.name)
-
-                    }
-                })
+                await connectWallet('MetaMask')
             }} ref={metaMaskRef}>metamask
             </button>
             <button onClick={async () => {
                 // connectTrust()
-                const result = await web3Wallet.getAvailableWallets()
-                await web3Wallet.connect(result[0].name)
+                await connectWallet('Trust Wallet')
             }}>trust
             </button>
-            <button onClick={() => connectCoinBase()}>coinbase</button>
+            <button onClick={async () => {
+                // await connectCoinBase()
+                await connectWallet('coinbase')
+            }}>coinbase
+            </button>
             <button onClick={() => sendTransaction()}>send Transaction</button>
             <button onClick={() => disconnect()}>disconnect</button>
             <button onClick={() => test()}>test</button>
@@ -180,11 +196,12 @@ function App() {
             <button onClick={async () => {
                 // changeChain()
                 try {
+                    await web3EthereumWallet.changeEthereumChainById(new Web3().utils.toHex(1))
+                    // await web3EthereumWallet.changeEthereumChainById(new Web3().utils.toHex(43114))
                     console.log(3123123123)
-                    await web3Wallet.changeChainId(new Web3().utils.toHex(43161))
                 } catch (e) {
                     console.log(333)
-                    await web3Wallet.addEthereumChain([{
+                    await web3EthereumWallet.addEthereumChain([{
                         chainName: 'EQBR',
                         rpcUrls: ["https://socket-ag.eqhub.eqbr.com?socketKey=61Nsv25-UFzF4TH0gOV2n4kYamGxsq9_-NTOUyTIPjk"],
                         chainId: new Web3().utils.toHex(43161),
@@ -197,6 +214,10 @@ function App() {
                     console.log(4444)
                 }
             }}>change chain to avalanche
+            </button>
+            <button onClick={async () => {
+                await connectWallet('zerion')
+            }}>zerion
             </button>
             <div>balance: {balance}</div>
         </div>

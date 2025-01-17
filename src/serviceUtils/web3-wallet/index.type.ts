@@ -1,3 +1,5 @@
+import {EIP1193Provider} from "web3";
+
 type Transaction = {
     blockHash: string;
     blockNumber: number;
@@ -26,10 +28,13 @@ type SignTypedData = {
 }
 
 export type DetectedWalletList = {
-    icon: string;
-    name: string;
-    rdns: string;
-    uuid: string;
+    info: {
+        icon: string;
+        name: string; // 지갑 명
+        rdns: string;
+        uuid: string; // 새로고침할 떄마다 변경되어서 사용하면 X
+    }
+    provider: EIP1193Provider<any>
 }
 
 export type ChainInfo = {
