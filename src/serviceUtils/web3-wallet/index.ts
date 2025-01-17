@@ -3,13 +3,16 @@ import {ChainInfo, DetectedWalletList} from "./index.type";
 
 const web3 = new Web3();
 
-class Web3Wallet {
+class Web3EthereumWallet {
     walletName: string | null;
     web3: Web3 | null;
     account: {
         address: null | string;
     }
     chainId: null | string;
+    onAccountChanged: (account: string) => void
+    onChainChanged: (chain: string) => void
+
 
     constructor() {
         this.walletName = null;
@@ -18,20 +21,23 @@ class Web3Wallet {
             address: null,
         };
         this.chainId = null;
+        this.onAccountChanged = (account: string) => {
+        }
+        this.onChainChanged = (chain: string) => {
+        }
     }
 
     async getAvailableWallets() {
         let wallets: any[] = []
         await Web3.requestEIP6963Providers().then(async (res) => {
             for (const [key, value] of res) {
-                console.log(value)
                 wallets.push(value.info)
             }
         })
         return wallets
     }
 
-    initialize() {
+    private initialize() {
         this.walletName = null;
         this.web3 = null;
         this.account = {
@@ -40,52 +46,52 @@ class Web3Wallet {
         this.chainId = null;
     }
 
-
-    detectAccountChanged() {
-        this.web3?.provider?.on('accountsChanged', (account) => {
+    private detectAccountChanged() {
+        return this.web3?.provider?.on('accountsChanged', (account) => {
             this.account.address = account[0]
-            return account[0]
+            this.onAccountChanged(account[0])
         })
     }
 
-    detectChainChanged() {
-        this.web3?.provider?.on('chainChanged', (chain) => {
+    private detectChainChanged() {
+        return this.web3?.provider?.on('chainChanged', (chain) => {
             this.chainId = chain;
-            return chain;
+            this.onChainChanged(chain)
         })
     }
 
     async connect(walletName: DetectedWalletList["name"]) {
         try {
+            let wallet: any[] = []
             await Web3.requestEIP6963Providers().then(async (res) => {
                 for (const [key, value] of res) {
-                    console.log(value)
                     if (value.info.name === walletName) {
+                        wallet.push(value.info.name)
                         this.web3 = new Web3(value.provider);
                         this.walletName = value.info.name;
                     }
                 }
             })
+            if (wallet.length === 0) {
+                throw new Error("no installed wallet found");
+            }
             if (this.web3) {
                 const result = await this.web3?.eth.requestAccounts() as string[]
                 const chainId = await this.web3?.eth.getChainId()
                 this.chainId = chainId?.toString() as string
                 this.account.address = result[0];
                 this.detectAccountChanged()
+                this.detectChainChanged()
                 return {address: this.account.address, chainId: this.chainId, walletName: this.walletName};
             }
         } catch (e) {
             console.error(e)
-            throw new Error('failed to connect to the web3 wallet')
         }
     }
 
     async disconnect() {
         if (this.web3) {
-            if (this.web3?.provider?.disconnect) {
-                // for trust wallet disconnect
-                this.web3.provider.disconnect();
-            } else {
+            try {
                 this.web3?.provider?.request({
                     method: "wallet_revokePermissions",
                     params: [
@@ -94,11 +100,13 @@ class Web3Wallet {
                         }
                     ],
                 })
+                this.initialize()
+                return true
+            } catch (e) {
+                this.web3.provider?.disconnect()
             }
-            this.initialize()
-            return
         }
-        throw new Error('failed to disconnect wallet')
+        throw new Error('not connected any wallet')
     }
 
     getCurrentWallet() {
@@ -182,9 +190,14 @@ class Web3Wallet {
 
     async changeChainId(chainId: string) {
         try {
-            return await this.web3?.provider?.request({method: 'wallet_switchEthereumChain', params: [{chainId}]})
+            await this.web3?.provider?.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{chainId}]
+            })
+            return true
         } catch (e) {
             console.error(e)
+            throw new Error('failed to change chain')
         }
     }
 
@@ -197,7 +210,7 @@ class Web3Wallet {
         }
     }
 
-    async addEthereumChain(chainInfo: ChainInfo) {
+    async addEthereumChain(chainInfo: ChainInfo[]) {
         try {
             const result = await this.web3?.provider?.request({method: 'wallet_addEthereumChain', params: chainInfo})
             return result
@@ -208,4 +221,4 @@ class Web3Wallet {
     }
 }
 
-export const web3Wallet = new Web3Wallet()
+export const web3EthereumWallet = new Web3EthereumWallet()

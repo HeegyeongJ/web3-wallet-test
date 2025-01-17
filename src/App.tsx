@@ -148,16 +148,28 @@ function App() {
         })
         console.log(result)
     }
+
     useEffect(() => {
         getBalance()
     }, [account]);
 
     return (
         <div>
-            <button onClick={() => connectMetaMask()} ref={metaMaskRef}>metamask</button>
+            <button onClick={async () => {
+                // connectMetaMask()
+                const result = await web3Wallet.getAvailableWallets()
+                result.map(async (item) => {
+                    if (item.name === 'MetaMask') {
+                        await web3Wallet.connect(item.name)
+
+                    }
+                })
+            }} ref={metaMaskRef}>metamask
+            </button>
             <button onClick={async () => {
                 // connectTrust()
-                console.log(await web3Wallet.getAvailableWallets())
+                const result = await web3Wallet.getAvailableWallets()
+                await web3Wallet.connect(result[0].name)
             }}>trust
             </button>
             <button onClick={() => connectCoinBase()}>coinbase</button>
@@ -165,7 +177,27 @@ function App() {
             <button onClick={() => disconnect()}>disconnect</button>
             <button onClick={() => test()}>test</button>
             <button onClick={() => onSigning()}>sign</button>
-            <button onClick={() => changeChain()}>change chain to avalanche</button>
+            <button onClick={async () => {
+                // changeChain()
+                try {
+                    console.log(3123123123)
+                    await web3Wallet.changeChainId(new Web3().utils.toHex(43161))
+                } catch (e) {
+                    console.log(333)
+                    await web3Wallet.addEthereumChain([{
+                        chainName: 'EQBR',
+                        rpcUrls: ["https://socket-ag.eqhub.eqbr.com?socketKey=61Nsv25-UFzF4TH0gOV2n4kYamGxsq9_-NTOUyTIPjk"],
+                        chainId: new Web3().utils.toHex(43161),
+                        nativeCurrency: {
+                            name: 'EQBR',
+                            decimals: 18,
+                            symbol: 'EQBR'
+                        }
+                    }])
+                    console.log(4444)
+                }
+            }}>change chain to avalanche
+            </button>
             <div>balance: {balance}</div>
         </div>
     );
