@@ -30,12 +30,12 @@ class Web3EthereumWallet {
 
     async getAvailableWallets() {
         let wallets: any[] = []
-        await Web3.requestEIP6963Providers().then(async (res) => {
-            for (const [key, value] of res) {
-                wallets.push(value)
-            }
-        })
-        return wallets
+        // await Web3.requestEIP6963Providers().then(async (res) => {
+        //     for (const [key, value] of res) {
+        //         wallets.push(value)
+        //     }
+        // })
+        // return wallets
     }
 
     private initialize() {
@@ -64,17 +64,30 @@ class Web3EthereumWallet {
     async connect(wallet: DetectedWalletList) {
         try {
             this.web3 = new Web3(wallet.provider)
-            const result = await this.web3?.eth.requestAccounts() as string[]
-            const chainId = await this.web3?.eth.getChainId()
-            this.chainId = chainId?.toString() as string
-            this.walletName = wallet.info.name
-            this.account.address = result[0];
-            console.log(result[0])
-            this.detectAccountChanged()
-            this.detectChainChanged()
-            return {address: this.account.address, chainId: this.chainId, walletName: this.walletName};
-        } catch (e) {
-            console.error(e)
+            if (this.web3) {
+                const result = await this.web3?.eth.requestAccounts() as string[]
+                console.log(222222222)
+                const chainId = await this.web3?.eth.getChainId()
+                this.chainId = chainId?.toString() as string
+                this.walletName = wallet.info.name
+                this.account.address = result[0];
+                console.log(result[0])
+                this.detectAccountChanged()
+                this.detectChainChanged()
+                return {
+                    address: this.account.address,
+                    chainId: this.chainId,
+                    walletName: this.walletName,
+                    web3: this.web3
+                };
+            }
+            throw new Error('failed to initialize web3')
+        } catch (e: any) {
+            // if (e?.error.code === -32603) {
+            //     alert('지갑 생성 필요')
+            //     window.open('https://apps.apple.com/us/app/whisper-msg/id1592954310')
+            // }
+            console.error(e.data.error)
         }
     }
 
@@ -104,13 +117,6 @@ class Web3EthereumWallet {
         throw new Error('not connected any wallet')
     }
 
-    getCurrentWallet() {
-        if (this.web3) {
-            return {web3: this.web3, address: this.account.address};
-        }
-        throw new Error('not connected any wallet')
-    }
-
     async sendTransaction(txParams: {
         from: string;
         to?: string;
@@ -128,6 +134,26 @@ class Web3EthereumWallet {
             console.error(e)
             throw new Error('failed to send transaction')
         }
+    }
+
+    async deployContract(contractABI: any, contractBytecode: string) {
+        if (this.web3) {
+            const contract = new this.web3.eth.Contract(contractABI)
+            const contractDeployer = contract.deploy({
+                data: contractBytecode,
+            })
+
+            const gas = await contractDeployer.estimateGas({
+                from: this.account.address as string,
+            })
+
+            const tx = await contractDeployer.send({
+                from: this.account.address as string,
+                gas: gas.toString()
+            })
+            return tx
+        }
+        throw new Error('not connected any wallet')
     }
 
 
@@ -198,7 +224,9 @@ class Web3EthereumWallet {
 
     async getBalance(address: string) {
         try {
-            return await this.web3?.eth.getBalance(address)
+            if (this.web3) {
+                return await this.web3?.eth.getBalance(address)
+            }
         } catch (e) {
             console.error(e)
             throw new Error('failed to get balance')

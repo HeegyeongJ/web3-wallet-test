@@ -4,7 +4,7 @@
   "private": true,
   "dependencies": {
     "@coinbase/wallet-sdk": "^4.2.4",
-    "@metamask/sdk-react": "^0.31.4",
+    "@metamask/sdk-react": "^0.31.5",
     "@reown/appkit": "^1.6.1",
     "@reown/appkit-adapter-wagmi": "^1.6.1",
     "@reown/walletkit": "^1.1.2",
