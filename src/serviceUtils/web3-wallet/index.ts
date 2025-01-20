@@ -131,17 +131,27 @@ class Web3EthereumWallet {
     }
 
 
-    async callContractMethod(contractABI: any, contractAddress: string, method: string, amount: number, gasPrice: string, gas: string) {
+    async callERC20ContractMethod(contractInfo : {contractABI: any, contractAddress: string, method: string, amount: number, toAddress: string, decimals: number}) {
         try {
+            const {contractABI, contractAddress, method, amount, toAddress, decimals} = contractInfo
             if (this.web3) {
                 const contract = new this.web3.eth.Contract(contractABI, contractAddress)
-                const txParameter = [contractAddress, web3.utils.toHex(web3.utils.toWei(amount, 'ether'))]
-                const encodeParameter = contract.methods[method](...txParameter).encodeABI();
+                const tokenAmount = amount * 10 ** decimals;
+
+                const gasPrice = await this.web3.eth.getGasPrice()
+                const encodeParameter = contract.methods[method](contractAddress ,tokenAmount.toString()).encodeABI();
+
+                const estimatedGas = await this.web3.eth.estimateGas({
+                    to: toAddress,
+                    from: this.account.address as string,
+                    data: encodeParameter,
+                });
+
                 const transaction = {
                     to: contractAddress,
                     chainId: this.chainId as string,
                     gasPrice,
-                    gas,
+                    gas: estimatedGas,
                     data: encodeParameter,
                     from: this.account.address as string
                 }

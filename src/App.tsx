@@ -4,11 +4,13 @@ import {ethers} from "ethers";
 import {Web3} from "web3";
 import {Account} from "viem";
 import {web3EthereumWallet} from "./serviceUtils/web3-wallet";
+import {USDT_ABI, USDT_CONTRACT_ADDRESS} from "./contract/example";
 
 
 function App() {
     const [web3, setWeb3] = useState<any>();
     const [account, setAccount] = useState<any>(null);
+    const [amount, setAmount] = useState(0);
     const [provider, setProvider] = useState<any>();
     const [balance, setBalance] = useState<number>(0);
 
@@ -80,11 +82,9 @@ function App() {
             const transaction = {
                 to: "0x51F6661CAB4553d8434F005E06314A5cD4d00A27",
                 from: account,
-                value: "0",
+                value: amount,
             }
-            console.log(1111)
-            const result = await web3?.eth.sendTransaction(transaction)
-            console.log(result)
+            await web3EthereumWallet.sendTransaction(transaction)
         } catch (e) {
             console.log(e)
         }
@@ -160,6 +160,7 @@ function App() {
     useEffect(() => {
         getBalance()
         getDetectedWallets()
+        test()
     }, [account]);
 
     const connectWallet = async (name: string) => {
@@ -172,6 +173,20 @@ function App() {
             }
         })
     }
+
+    const sendUSDT = async () => {
+        const contractInfo = {
+            toAddress: "0x51F6661CAB4553d8434F005E06314A5cD4d00A27",
+            contractABI: USDT_ABI,
+            contractAddress: USDT_CONTRACT_ADDRESS,
+            amount,
+            decimals: 6,
+            method: 'transfer'
+        }
+        const result = await web3EthereumWallet.callERC20ContractMethod(contractInfo)
+        console.log(result)
+    }
+
     return (
         <div>
             <button onClick={async () => {
@@ -189,15 +204,14 @@ function App() {
                 await connectWallet('coinbase')
             }}>coinbase
             </button>
-            <button onClick={() => sendTransaction()}>send Transaction</button>
+            {/*<button onClick={() => sendTransaction()}>send Transaction</button>*/}
             <button onClick={() => disconnect()}>disconnect</button>
-            <button onClick={() => test()}>test</button>
             <button onClick={() => onSigning()}>sign</button>
             <button onClick={async () => {
                 // changeChain()
                 try {
-                    await web3EthereumWallet.changeEthereumChainById(new Web3().utils.toHex(1))
-                    // await web3EthereumWallet.changeEthereumChainById(new Web3().utils.toHex(43114))
+                    // await web3EthereumWallet.changeEthereumChainById(new Web3().utils.toHex(1))
+                    await web3EthereumWallet.changeEthereumChainById(new Web3().utils.toHex(43161))
                     console.log(3123123123)
                 } catch (e) {
                     console.log(333)
@@ -213,14 +227,12 @@ function App() {
                     }])
                     console.log(4444)
                 }
-            }}>change chain to avalanche
-            </button>
-            <button onClick={async () => {
-                await connectWallet('zerion')
-            }}>zerion
+            }}>change chain to EQBR
             </button>
             <div>balance: {balance}</div>
-        </div>
+            <input type={"number"} onChange={(e) => setAmount(Number(e.target.value))}/>
+            <button onClick={() => sendUSDT()}>sendUSDT</button>
+            </div>
     );
 }
 
