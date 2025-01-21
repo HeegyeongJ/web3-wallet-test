@@ -57,42 +57,42 @@ function App() {
             console.log(new Error('connection failed'))
         }
     }
-    const connectCoinBase = async () => {
-        let web3: any;
-        await Web3.requestEIP6963Providers().then(res => {
-            for (const [key, value] of res) {
-                console.log(value);
-                if (value.info.name.includes('Coinbase')) {
-                    web3 = new Web3(value.provider);
-                    console.log('hhhhhhhhhhhhh', value.info)
-                    setProvider(value.provider)
-                    setWeb3(web3)
-                }
-            }
-        })
-        try {
-            const result = await web3?.eth.requestAccounts()
-            setAccount(result[0])
-        } catch (e) {
-            console.log(e)
-        }
-    }
+    // const connectCoinBase = async () => {
+    //     let web3: any;
+    //     await Web3.requestEIP6963Providers().then(res => {
+    //         for (const [key, value] of res) {
+    //             console.log(value);
+    //             if (value.info.name.includes('Coinbase')) {
+    //                 web3 = new Web3(value.provider);
+    //                 console.log('hhhhhhhhhhhhh', value.info)
+    //                 setProvider(value.provider)
+    //                 setWeb3(web3)
+    //             }
+    //         }
+    //     })
+    //     try {
+    //         const result = await web3?.eth.requestAccounts()
+    //         setAccount(result[0])
+    //     } catch (e) {
+    //         console.log(e)
+    //     }
+    // }
 
-    const sendTransaction = async () => {
-        try {
-            const transaction = {
-                to: "0x51F6661CAB4553d8434F005E06314A5cD4d00A27",
-                from: account,
-                value: "0",
-            }
-            console.log(1111)
-            const result = await web3?.eth.sendTransaction(transaction)
-            console.log(result)
-        } catch (e) {
-            console.log(e)
-        }
+    // const sendTransaction = async () => {
+    //     try {
+    //         const transaction = {
+    //             to: "0x51F6661CAB4553d8434F005E06314A5cD4d00A27",
+    //             from: account,
+    //             value: "0",
+    //         }
+    //         console.log(1111)
+    //         const result = await web3?.eth.sendTransaction(transaction)
+    //         console.log(result)
+    //     } catch (e) {
+    //         console.log(e)
+    //     }
+    // }
 
-    }
     const disconnect = async () => {
         // coinbase 지원 안함
         try {
