@@ -38,8 +38,9 @@ export type DetectedWalletList = {
 }
 
 export type ChainInfo = {
+    chainName: string;
     chainId: string;
-    rpcUrls: string[]; chainName: string
+    rpcUrls: string[];
     nativeCurrency: { name: string, decimals: number, symbol: string }
     blockExplorerUrls?: string[]
     iconUrls?: string[]

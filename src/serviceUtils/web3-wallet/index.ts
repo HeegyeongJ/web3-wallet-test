@@ -167,16 +167,13 @@ class Web3EthereumWallet {
         method: string,
         amount: number,
         toAddress: string,
-        decimals: number
     }) {
         try {
-            const {contractABI, contractAddress, method, amount, toAddress, decimals} = contractInfo
+            const {contractABI, contractAddress, method, amount, toAddress} = contractInfo
             if (this.web3) {
                 const contract = new this.web3.eth.Contract(contractABI, contractAddress)
-                const tokenAmount = amount * 10 ** decimals;
 
-                const gasPrice = await this.web3.eth.getGasPrice()
-                const encodeParameter = contract.methods[method](toAddress, tokenAmount).encodeABI();
+                const encodeParameter = contract.methods[method](toAddress, amount).encodeABI();
 
                 const estimatedGas = await this.web3.eth.estimateGas({
                     to: contractAddress,
@@ -187,7 +184,6 @@ class Web3EthereumWallet {
                 const transaction = {
                     to: contractAddress,
                     chainId: this.chainId as string,
-                    gasPrice,
                     gas: estimatedGas,
                     data: encodeParameter,
                     from: this.account.address as string,
@@ -234,16 +230,12 @@ class Web3EthereumWallet {
     }
 
     async changeEthereumChainById(chainId: string) {
-        try {
-            await this.web3?.provider?.request({
+            const result = await this.web3?.provider?.request({
                 method: 'wallet_switchEthereumChain',
                 params: [{chainId}]
             })
             this.chainId = chainId
-            return true
-        } catch (e) {
-            console.error(e)
-        }
+            return result
     }
 
     async getBalance(address: string) {
@@ -260,7 +252,7 @@ class Web3EthereumWallet {
     async addEthereumChain(chainInfo: ChainInfo) {
         try {
             const result = await this.web3?.provider?.request({method: 'wallet_addEthereumChain', params: [chainInfo]})
-            this.chainId = chainInfo[0].chainId
+            this.chainId = chainInfo.chainId
             return result
         } catch (e) {
             console.error(e)

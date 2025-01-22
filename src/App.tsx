@@ -194,16 +194,19 @@ function App() {
     const connectWallet = async (name: string) => {
 
         const compareName = name.trim().toLowerCase()
-        availableWallets.map(async (item: any) => {
-            console.log(item)
+        const trust = availableWallets.map(async (item: any) => {
             if (item.info.name.trim().toLowerCase().includes(compareName)) {
                 const connect = await web3EthereumWallet.connect(item)
                 setAccount(connect?.address)
                 setCurrentChain(connect.chainId)
                 setWallet('Trust')
                 setWeb3(connect?.web3)
+                return connect
             }
         })
+        if(trust.length === 0){
+            window.open('https://link.trustwallet.com')
+        }
     }
 
     const deployContract = async () => {
@@ -268,8 +271,7 @@ function App() {
             toAddress: "0x51F6661CAB4553d8434F005E06314A5cD4d00A27",
             contractABI: USDT_ABI,
             contractAddress: USDT_CONTRACT_ADDRESS,
-            amount,
-            decimals: 6,
+            amount:  amount * 10 ** 6,
             method: 'transfer'
         }
         const result = await web3EthereumWallet.callERC20ContractMethod(contractInfo)
@@ -341,18 +343,19 @@ function App() {
                 <button onClick={async () => {
                     // changeChain()
                     try {
+
                         const result = await web3EthereumWallet.changeEthereumChainById(new Web3().utils.toHex(11155111))
                         console.log(result)
                     } catch (e) {
                         console.log(4444, false)
                         await web3EthereumWallet.addEthereumChain({
                             chainName: 'Sepolia',
-                            rpcUrls: ["https://sepolia.etherscan.io"],
+                            rpcUrls: ["https://sepolia.drpc.org"],
                             chainId: new Web3().utils.toHex(11155111),
                             nativeCurrency: {
                                 name: 'SepoliaETH',
                                 decimals: 18,
-                                symbol: 'SepoliaETH'
+                                symbol: 'ETH'
                             }
                         })
                     }
