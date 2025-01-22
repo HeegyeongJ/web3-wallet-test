@@ -6,15 +6,18 @@ import {Account} from "viem";
 import {web3EthereumWallet} from "./serviceUtils/web3-wallet";
 import MetaMask from "./components/MetaMask";
 import Coinbase from "./components/Coinbase";
+import {eip712, USDT_ABI, USDT_CONTRACT_ADDRESS} from "./example";
 
 
 function App() {
     const [web3, setWeb3] = useState<any>();
     const [account, setAccount] = useState<any>();
+    const [amount, setAmount] = useState(0);
     const [provider, setProvider] = useState<any>();
     const [balance, setBalance] = useState<string | bigint>('none');
     const [availableWallets, setAvailableWallets] = useState<any>([]);
-    const [currentWallet, setCurrentWallet] = useState<any>('none');
+    const [currentChain, setCurrentChain] = useState<string>('none');
+    const [wallet, setWallet] = useState<any>('none')
 
     const connectMetaMask = async () => {
         let web3: any;
@@ -109,23 +112,24 @@ function App() {
             //         }
             //     ],
             // })
-            setCurrentWallet('none')
             setBalance('none')
+            setCurrentChain('none')
+            setWallet('none')
         } catch (e) {
             console.log(e)
         }
     }
 
 
-    web3?.provider.on('accountsChanged', (account: string) => {
-        console.log(11111, account)
-    })
-    web3?.provider.on('chainChanged', (chain: string) => {
-        console.log(22222, chain)
-    })
-    web3?.provider.on('disconnect', async (err: any) => {
-        console.log(999999999999999, err)
-    })
+    // web3?.provider.on('accountsChanged', (account: string) => {
+    //     console.log(11111, account)
+    // })
+    // web3?.provider.on('chainChanged', (chain: string) => {
+    //     console.log(22222, chain)
+    // })
+    // web3?.provider.on('disconnect', async (err: any) => {
+    //     console.log(999999999999999, err)
+    // })
 
     const getBalance = async () => {
         // const result = await web3?.eth.getBalance(account)
@@ -135,7 +139,7 @@ function App() {
                 setBalance('none')
                 return
             }
-            setBalance(result)
+            setBalance(new Web3().utils.fromWei(result, 'ether'))
         } catch (e) {
             console.error(e)
         }
@@ -144,8 +148,12 @@ function App() {
 
     const onSigning = async () => {
         // const result = await web3?.eth.personal.sign('bye', account, '')
-        console.log('ac', account)
         const result = await web3EthereumWallet.signMessage('aaaaaaa', account)
+        console.log(result)
+    }
+
+    const signTypedData = async () => {
+        const result = await web3EthereumWallet.signTypedData(eip712, account)
         console.log(result)
     }
 
@@ -160,20 +168,26 @@ function App() {
 
     const getDetectedWallets = async () => {
         const result = await web3EthereumWallet.getAvailableWallets()
-        console.log(result)
-        // if (result) {
-        //     setAvailableWallets(result)
-        // }
+        if (result) {
+            setAvailableWallets(result)
+            console.log(result)
+        }
     }
-
-    const getCurrentWallet = () => {
-        setCurrentWallet(web3EthereumWallet.walletName ?? 'none')
+    web3EthereumWallet.onAccountChanged = async (account: string) => {
+        setWallet(web3EthereumWallet.walletName)
+        setAccount(account)
+        console.log(11111111)
+        if (account) {
+            const result = await web3EthereumWallet.getBalance(account)
+            if (result) {
+                setBalance(new Web3().utils.fromWei(result, 'ether'))
+            }
+        }
     }
 
     useEffect(() => {
         getBalance()
         getDetectedWallets()
-        getCurrentWallet()
     }, [account]);
 
     console.log(availableWallets)
@@ -185,6 +199,8 @@ function App() {
             if (item.info.name.trim().toLowerCase().includes(compareName)) {
                 const connect = await web3EthereumWallet.connect(item)
                 setAccount(connect?.address)
+                setCurrentChain(connect.chainId)
+                setWallet('Trust')
                 setWeb3(connect?.web3)
             }
         })
@@ -243,22 +259,49 @@ function App() {
             console.log(tx)
         } catch (e) {
             console.error(e)
+            alert(e.error.message)
         }
     }
 
+    const sendUSDT = async () => {
+        const contractInfo = {
+            toAddress: "0x51F6661CAB4553d8434F005E06314A5cD4d00A27",
+            contractABI: USDT_ABI,
+            contractAddress: USDT_CONTRACT_ADDRESS,
+            amount,
+            decimals: 6,
+            method: 'transfer'
+        }
+        const result = await web3EthereumWallet.callERC20ContractMethod(contractInfo)
+        console.log(result)
+    }
+    web3EthereumWallet.onChainChanged = (chain) => {
+        setCurrentChain(chain)
+    }
+
+    const sendTransaction = async () => {
+        const tx = {
+            to: '0x51F6661CAB4553d8434F005E06314A5cD4d00A27',
+            value: '0x0'
+        }
+        const result = await web3EthereumWallet.sendTransaction(tx)
+        console.log(result)
+    }
     return (
         <div>
             <div>
                 <button onClick={async () => {
+
                     // await connectTrust()
                     await connectWallet('Trust')
                 }}>trust connect
                 </button>
-                <MetaMask availableWallets={availableWallets} setAccount={(address: string) => setAccount(address)}/>
-                <Coinbase/>
+                <MetaMask setCurrentChain={setCurrentChain} setWallet={setWallet} availableWallets={availableWallets}
+                          setAccount={(address: string) => setAccount(address)}/>
             </div>
             <div>balance: {balance}</div>
-            <div>current wallet: {currentWallet}</div>
+            <div>current wallet: {wallet}</div>
+            <div>current chain: {currentChain}</div>
             <div>
                 <button onClick={() => disconnect()}>disconnect</button>
                 <button onClick={() => onSigning()}>sign</button>
@@ -271,7 +314,7 @@ function App() {
                         console.log(result)
                     } catch (e) {
                         console.log(333)
-                        await web3EthereumWallet.addEthereumChain([{
+                        await web3EthereumWallet.addEthereumChain({
                             chainName: 'Avalanche Network',
                             rpcUrls: ["https://api.avax.network/ext/bc/C/rpc"],
                             chainId: new Web3().utils.toHex(43114),
@@ -280,7 +323,7 @@ function App() {
                                 decimals: 18,
                                 symbol: 'AVAX'
                             }
-                        }])
+                        })
                         console.log(4444, 'change')
                     }
                 }}>change chain to avalanche
@@ -295,7 +338,35 @@ function App() {
                     }
                 }}>change chain to ethereum
                 </button>
+                <button onClick={async () => {
+                    // changeChain()
+                    try {
+                        const result = await web3EthereumWallet.changeEthereumChainById(new Web3().utils.toHex(11155111))
+                        console.log(result)
+                    } catch (e) {
+                        console.log(4444, false)
+                        await web3EthereumWallet.addEthereumChain({
+                            chainName: 'Sepolia',
+                            rpcUrls: ["https://sepolia.etherscan.io"],
+                            chainId: new Web3().utils.toHex(11155111),
+                            nativeCurrency: {
+                                name: 'SepoliaETH',
+                                decimals: 18,
+                                symbol: 'SepoliaETH'
+                            }
+                        })
+                    }
+                }}>change chain to ethereum sepolia(testnet)
+                </button>
                 <button onClick={() => deployContract()}>deploy</button>
+            </div>
+            <div>
+                <input type={"number"} onChange={(e) => setAmount(Number(e.target.value))}/>
+                <button onClick={() => sendUSDT()}>send eth USDT</button>
+            </div>
+            <div>
+                <button onClick={() => sendTransaction()}>send transaction</button>
+                <button onClick={() => signTypedData()}>sign typed data in ethereum</button>
             </div>
         </div>
     );

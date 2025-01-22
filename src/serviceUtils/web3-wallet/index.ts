@@ -23,19 +23,21 @@ class Web3EthereumWallet {
         };
         this.chainId = null;
         this.onAccountChanged = (account: string) => {
+            this.account.address = account
         }
         this.onChainChanged = (chain: string) => {
+            this.chainId = chain
         }
     }
 
     async getAvailableWallets() {
         let wallets: any[] = []
-        // await Web3.requestEIP6963Providers().then(async (res) => {
-        //     for (const [key, value] of res) {
-        //         wallets.push(value)
-        //     }
-        // })
-        // return wallets
+        await Web3.requestEIP6963Providers().then(async (res) => {
+            for (const [key, value] of res) {
+                wallets.push(value)
+            }
+        })
+        return wallets
     }
 
     private initialize() {
@@ -68,7 +70,7 @@ class Web3EthereumWallet {
                 const result = await this.web3?.eth.requestAccounts() as string[]
                 console.log(222222222)
                 const chainId = await this.web3?.eth.getChainId()
-                this.chainId = chainId?.toString() as string
+                this.chainId = web3.utils.toHex(chainId)
                 this.walletName = wallet.info.name
                 this.account.address = result[0];
                 console.log(result[0])
@@ -83,11 +85,10 @@ class Web3EthereumWallet {
             }
             throw new Error('failed to initialize web3')
         } catch (e: any) {
-            // if (e?.error.code === -32603) {
-            //     alert('지갑 생성 필요')
-            //     window.open('https://apps.apple.com/us/app/whisper-msg/id1592954310')
-            // }
-            console.error(e.data.error)
+            if (e?.error?.code === -32603) {
+                alert('지갑 생성 필요')
+            }
+            throw e
         }
     }
 
@@ -118,7 +119,6 @@ class Web3EthereumWallet {
     }
 
     async sendTransaction(txParams: {
-        from: string;
         to?: string;
         value?: number | string;
         gas?: number;
@@ -128,55 +128,79 @@ class Web3EthereumWallet {
         chainId?: bigint
     }) {
         try {
-            const result = await this.web3?.eth.sendTransaction(txParams);
+            const result = await this.web3?.eth.sendTransaction({from: this.account.address, ...txParams});
             return result
         } catch (e) {
             console.error(e)
-            throw new Error('failed to send transaction')
+            throw e
         }
     }
 
     async deployContract(contractABI: any, contractBytecode: string) {
         if (this.web3) {
-            const contract = new this.web3.eth.Contract(contractABI)
-            const contractDeployer = contract.deploy({
-                data: contractBytecode,
-            })
+            try {
+                const contract = new this.web3.eth.Contract(contractABI)
+                const contractDeployer = contract.deploy({
+                    data: contractBytecode,
+                })
 
-            const gas = await contractDeployer.estimateGas({
-                from: this.account.address as string,
-            })
+                const gas = await contractDeployer.estimateGas({
+                    from: this.account.address as string,
+                })
 
-            const tx = await contractDeployer.send({
-                from: this.account.address as string,
-                gas: gas.toString()
-            })
-            return tx
+                const tx = await contractDeployer.send({
+                    from: this.account.address as string,
+                    gas: gas.toString()
+                })
+                return tx
+            } catch (e) {
+                console.error(e)
+                throw e
+            }
         }
         throw new Error('not connected any wallet')
     }
 
-
-    async callContractMethod(contractABI: any, contractAddress: string, method: string, amount: number, gasPrice: string, gas: string) {
+    async callERC20ContractMethod(contractInfo: {
+        contractABI: any,
+        contractAddress: string,
+        method: string,
+        amount: number,
+        toAddress: string,
+        decimals: number
+    }) {
         try {
+            const {contractABI, contractAddress, method, amount, toAddress, decimals} = contractInfo
             if (this.web3) {
                 const contract = new this.web3.eth.Contract(contractABI, contractAddress)
-                const txParameter = [contractAddress, web3.utils.toHex(web3.utils.toWei(amount, 'ether'))]
-                const encodeParameter = contract.methods[method](...txParameter).encodeABI();
+                const tokenAmount = amount * 10 ** decimals;
+
+                const gasPrice = await this.web3.eth.getGasPrice()
+                const encodeParameter = contract.methods[method](toAddress, tokenAmount).encodeABI();
+
+                const estimatedGas = await this.web3.eth.estimateGas({
+                    to: contractAddress,
+                    from: this.account.address as string,
+                    data: encodeParameter,
+                });
+
                 const transaction = {
                     to: contractAddress,
                     chainId: this.chainId as string,
                     gasPrice,
-                    gas,
+                    gas: estimatedGas,
                     data: encodeParameter,
-                    from: this.account.address as string
+                    from: this.account.address as string,
                 }
+                console.log(transaction)
                 const sendTransaction = await this.web3.eth.sendTransaction(transaction)
+                console.log('hyhhhhh')
                 return sendTransaction
             }
+            throw new Error('not connected any wallet')
         } catch (e) {
             console.error(e)
-            throw new Error('failed to send transaction')
+            throw e
         }
     }
 
@@ -187,7 +211,7 @@ class Web3EthereumWallet {
             return result
         } catch (e) {
             console.log(e)
-            throw new Error('failed to signing message')
+            throw e
         }
     }
 
@@ -196,8 +220,8 @@ class Web3EthereumWallet {
             const result = await this.web3?.eth.signTypedData(address, EIP712TypedData)
             return result
         } catch (e) {
-            console.log(e)
-            throw new Error('failed to sign typed data')
+            console.error(e)
+            throw e
         }
     }
 
@@ -215,10 +239,10 @@ class Web3EthereumWallet {
                 method: 'wallet_switchEthereumChain',
                 params: [{chainId}]
             })
+            this.chainId = chainId
             return true
         } catch (e) {
             console.error(e)
-            throw new Error('failed to change chain')
         }
     }
 
@@ -229,17 +253,18 @@ class Web3EthereumWallet {
             }
         } catch (e) {
             console.error(e)
-            throw new Error('failed to get balance')
+            throw e
         }
     }
 
-    async addEthereumChain(chainInfo: ChainInfo[]) {
+    async addEthereumChain(chainInfo: ChainInfo) {
         try {
-            const result = await this.web3?.provider?.request({method: 'wallet_addEthereumChain', params: chainInfo})
+            const result = await this.web3?.provider?.request({method: 'wallet_addEthereumChain', params: [chainInfo]})
+            this.chainId = chainInfo[0].chainId
             return result
         } catch (e) {
             console.error(e)
-            throw new Error('failed to add new chain')
+            throw e
         }
     }
 }
