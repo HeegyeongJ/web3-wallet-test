@@ -10,10 +10,8 @@ import {eip712, USDT_ABI, USDT_CONTRACT_ADDRESS} from "./example";
 
 
 function App() {
-    const [web3, setWeb3] = useState<any>();
     const [account, setAccount] = useState<any>();
     const [amount, setAmount] = useState(0);
-    const [provider, setProvider] = useState<any>();
     const [balance, setBalance] = useState<string | bigint>('none');
     const [availableWallets, setAvailableWallets] = useState<any>([]);
     const [currentChain, setCurrentChain] = useState<string>('none');
@@ -28,8 +26,6 @@ function App() {
                     console.log(22)
                     console.log(value.info)
                     web3 = new Web3(value.provider);
-                    setProvider(value.provider)
-                    setWeb3(web3);
                 }
             }
         })
@@ -44,22 +40,25 @@ function App() {
 
     const connectTrust = async () => {
         const windows = window as any
-        console.log(windows.trustWallet)
-        try {
-            const ethereumProvider = windows.trustWallet as any
-            // console.log(ethereumProvider.coinbaseWalletExtension)
-            // await ethereumProvider.request({
-            //     method: "eth_requestAccounts",
-            // })
-            const web3 = new Web3(ethereumProvider)
-            const result = await web3.eth.requestAccounts()
-            setWeb3(web3)
-            setProvider(ethereumProvider)
-            setAccount(result[0])
-        } catch (e) {
-            console.log(new Error('connection failed'))
+        console.log('window trust wallet', windows.trustWallet)
+        console.log('window isTrust', windows.ethereum.isTrust)
+        const ethereumProvider = windows.trustWallet as any
+        if (ethereumProvider) {
+            try {
+                // console.log(ethereumProvider.coinbaseWalletExtension)
+                // await ethereumProvider.request({
+                //     method: "eth_requestAccounts",
+                // })
+                const result = await web3EthereumWallet.connect({info: {name: 'Trust'}, provider: ethereumProvider})
+                setCurrentChain(result.chainId)
+                setWallet(result.walletName)
+                setAccount(result.address)
+            } catch (e) {
+                console.log(e)
+            }
         }
     }
+
     // const connectCoinBase = async () => {
     //     let web3: any;
     //     await Web3.requestEIP6963Providers().then(res => {
@@ -187,26 +186,27 @@ function App() {
 
     useEffect(() => {
         getBalance()
+    }, [account, currentChain]);
+
+    useEffect(() => {
         getDetectedWallets()
-    }, [account]);
+    }, []);
 
-    console.log(availableWallets)
+    console.log('availableWallets', availableWallets)
     const connectWallet = async (name: string) => {
-
         const compareName = name.trim().toLowerCase()
-        const trust = availableWallets.map(async (item: any) => {
-            if (item.info.name.trim().toLowerCase().includes(compareName)) {
-                const connect = await web3EthereumWallet.connect(item)
-                setAccount(connect?.address)
-                setCurrentChain(connect.chainId)
-                setWallet('Trust')
-                setWeb3(connect?.web3)
-                return connect
-            }
-        })
-        if(trust.length === 0){
-            window.open('https://link.trustwallet.com')
+        try {
+            const selectedWallet = availableWallets.find((item: any) => item.info.name.toLowerCase().includes(compareName))
+            console.log('ssss', selectedWallet)
+            const connect = await web3EthereumWallet.connect(selectedWallet)
+            setAccount(connect?.address)
+            setCurrentChain(connect.chainId)
+            setWallet('Trust')
+            return connect
+        } catch (e) {
+            return null
         }
+
     }
 
     const deployContract = async () => {
@@ -271,7 +271,7 @@ function App() {
             toAddress: "0x51F6661CAB4553d8434F005E06314A5cD4d00A27",
             contractABI: USDT_ABI,
             contractAddress: USDT_CONTRACT_ADDRESS,
-            amount:  amount * 10 ** 6,
+            amount: amount * 10 ** 6,
             method: 'transfer'
         }
         const result = await web3EthereumWallet.callERC20ContractMethod(contractInfo)
@@ -293,9 +293,11 @@ function App() {
         <div>
             <div>
                 <button onClick={async () => {
-
-                    // await connectTrust()
-                    await connectWallet('Trust')
+                    const wallet = await connectWallet('asdfasdf')
+                    console.log('connectWallet', wallet)
+                    if (!wallet) {
+                        await connectTrust()
+                    }
                 }}>trust connect
                 </button>
                 <MetaMask setCurrentChain={setCurrentChain} setWallet={setWallet} availableWallets={availableWallets}
@@ -313,7 +315,7 @@ function App() {
                     try {
                         // await web3EthereumWallet.changeEthereumChainById(new Web3().utils.toHex(1))
                         const result = await web3EthereumWallet.changeEthereumChainById(web3.utils.toHex(43114))
-                        console.log(result)
+                        console.log('change result', result)
                     } catch (e) {
                         console.log(333)
                         await web3EthereumWallet.addEthereumChain({
@@ -334,7 +336,7 @@ function App() {
                     // changeChain()
                     try {
                         const result = await web3EthereumWallet.changeEthereumChainById(new Web3().utils.toHex(1))
-                        console.log(result)
+                        console.log('change result', result)
                     } catch (e) {
                         console.log(4444, false)
                     }
@@ -345,7 +347,7 @@ function App() {
                     try {
 
                         const result = await web3EthereumWallet.changeEthereumChainById(new Web3().utils.toHex(11155111))
-                        console.log(result)
+                        console.log('change result', result)
                     } catch (e) {
                         console.log(4444, false)
                         await web3EthereumWallet.addEthereumChain({
@@ -365,7 +367,7 @@ function App() {
             </div>
             <div>
                 <input type={"number"} onChange={(e) => setAmount(Number(e.target.value))}/>
-                <button onClick={() => sendUSDT()}>send eth USDT</button>
+                <button onClick={() => sendUSDT()}>send eth USDT(testnet)</button>
             </div>
             <div>
                 <button onClick={() => sendTransaction()}>send transaction</button>

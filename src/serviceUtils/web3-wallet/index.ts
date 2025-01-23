@@ -68,7 +68,6 @@ class Web3EthereumWallet {
             this.web3 = new Web3(wallet.provider)
             if (this.web3) {
                 const result = await this.web3?.eth.requestAccounts() as string[]
-                console.log(222222222)
                 const chainId = await this.web3?.eth.getChainId()
                 this.chainId = web3.utils.toHex(chainId)
                 this.walletName = wallet.info.name
@@ -111,7 +110,7 @@ class Web3EthereumWallet {
                     this.initialize()
                     return true
                 } catch (disconnectError) {
-                    throw new Error(disconnectError as any)
+                    throw disconnectError
                 }
             }
         }
@@ -128,8 +127,7 @@ class Web3EthereumWallet {
         chainId?: bigint
     }) {
         try {
-            const result = await this.web3?.eth.sendTransaction({from: this.account.address, ...txParams});
-            return result
+            return await this.web3?.eth.sendTransaction({from: this.account.address, ...txParams});
         } catch (e) {
             console.error(e)
             throw e
@@ -168,9 +166,9 @@ class Web3EthereumWallet {
         amount: number,
         toAddress: string,
     }) {
-        try {
-            const {contractABI, contractAddress, method, amount, toAddress} = contractInfo
-            if (this.web3) {
+        if (this.web3) {
+            try {
+                const {contractABI, contractAddress, method, amount, toAddress} = contractInfo
                 const contract = new this.web3.eth.Contract(contractABI, contractAddress)
 
                 const encodeParameter = contract.methods[method](toAddress, amount).encodeABI();
@@ -192,33 +190,37 @@ class Web3EthereumWallet {
                 const sendTransaction = await this.web3.eth.sendTransaction(transaction)
                 console.log('hyhhhhh')
                 return sendTransaction
+            } catch (e) {
+                console.error(e)
+                throw e
             }
-            throw new Error('not connected any wallet')
-        } catch (e) {
-            console.error(e)
-            throw e
         }
+        throw new Error('not connected any wallet')
     }
 
     async signMessage(message: string, address: string) {
-        try {
-            // 마지막 인자 passphrase 는 지갑에서 서명시 자동으로 인식
-            const result = await this.web3?.eth.personal.sign(message, address, '')
-            return result
-        } catch (e) {
-            console.log(e)
-            throw e
+        if (this.web3) {
+            try {
+                // 마지막 인자 passphrase 는 지갑에서 서명시 자동으로 인식
+                return await this.web3?.eth.personal.sign(message, address, "");
+            } catch (e) {
+                console.log(e)
+                throw e
+            }
         }
+        throw new Error('not connected any wallet')
     }
 
     async signTypedData(EIP712TypedData: Eip712TypedData, address: string) {
-        try {
-            const result = await this.web3?.eth.signTypedData(address, EIP712TypedData)
-            return result
-        } catch (e) {
-            console.error(e)
-            throw e
+        if (this.web3) {
+            try {
+                return await this.web3?.eth.signTypedData(address, EIP712TypedData)
+            } catch (e) {
+                console.error(e)
+                throw e
+            }
         }
+        throw new Error('not connected any wallet')
     }
 
 
@@ -230,34 +232,44 @@ class Web3EthereumWallet {
     }
 
     async changeEthereumChainById(chainId: string) {
-            const result = await this.web3?.provider?.request({
-                method: 'wallet_switchEthereumChain',
-                params: [{chainId}]
-            })
-            this.chainId = chainId
-            return result
+        if (this.web3) {
+            try {
+                const result = await this.web3?.provider?.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{chainId}]
+                })
+                this.chainId = chainId
+                return result
+            } catch (e) {
+                console.error(e);
+                throw e;
+            }
+        }
+        throw new Error('not connected any wallet')
     }
 
     async getBalance(address: string) {
-        try {
-            if (this.web3) {
-                return await this.web3?.eth.getBalance(address)
-            }
-        } catch (e) {
-            console.error(e)
-            throw e
+        if (this.web3) {
+            return await this.web3?.eth.getBalance(address)
         }
+        throw new Error('not connected any wallet')
     }
 
     async addEthereumChain(chainInfo: ChainInfo) {
-        try {
-            const result = await this.web3?.provider?.request({method: 'wallet_addEthereumChain', params: [chainInfo]})
-            this.chainId = chainInfo.chainId
-            return result
-        } catch (e) {
-            console.error(e)
-            throw e
+        if (this.web3) {
+            try {
+                const result = await this.web3?.provider?.request({
+                    method: 'wallet_addEthereumChain',
+                    params: [chainInfo]
+                })
+                this.chainId = chainInfo.chainId
+                return result
+            } catch (e) {
+                console.error(e)
+                throw e
+            }
         }
+        throw new Error('not connected any wallet')
     }
 }
 
