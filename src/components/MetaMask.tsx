@@ -2,6 +2,7 @@ import React, {useEffect, useState} from 'react';
 import {web3EthereumWallet} from "../serviceUtils/web3-wallet";
 import {sdk} from "../sdk";
 import {checkPlatform} from "../serviceUtils/platformUtils";
+import {Wallet} from "../serviceUtils/web3-wallet/index.type";
 
 const MetaMask = ({setAccount, availableWallets, setWallet, setCurrentChain}: any) => {
     const [metaMaskProvider, setMetaMaskProvider] = useState<any>()
@@ -9,36 +10,43 @@ const MetaMask = ({setAccount, availableWallets, setWallet, setCurrentChain}: an
         const platform = checkPlatform();
         const mmWallet = availableWallets.find((wallet: any) => wallet?.info.name === 'MetaMask')
         if (mmWallet) {
-            const result = await web3EthereumWallet.connect({info: {name: 'MetaMask'}, provider: metaMaskProvider})
+            const result = await web3EthereumWallet.connect(Wallet.metamask)
             setWallet(result.walletName)
             setCurrentChain(result.chainId)
             setAccount(result?.address)
             return
         }
         try {
+            console.log(1111111111)
+            const result = await web3EthereumWallet.connect(Wallet.metamask)
             if (platform === 'mobile') {
-                let hasNavigatedAway = false;
+                if (!result) {
+                    let hasNavigatedAway = false;
 
-                const handleVisibilityChange = () => {
-                    if (document.visibilityState === "hidden") {
-                        hasNavigatedAway = true;
-                    }
-                };
+                    const handleVisibilityChange = () => {
+                        if (document.visibilityState === "hidden") {
+                            hasNavigatedAway = true;
+                        }
+                    };
 
-                document.addEventListener("visibilitychange", handleVisibilityChange);
+                    document.addEventListener("visibilitychange", handleVisibilityChange);
 
-                setTimeout(() => {
-                    if (!hasNavigatedAway) {
-                        window.open('https://metamask.app.link/dapp/192.163.0.31:3000')
-                    }
-                }, 2000);
-                document.removeEventListener("visibilitychange", handleVisibilityChange);
+                    setTimeout(() => {
+                        if (!hasNavigatedAway) {
+                            window.open('https://metamask.app.link/dapp/192.163.0.31:3000')
+                        }
+                    }, 2500);
+                    document.removeEventListener("visibilitychange", handleVisibilityChange);
+                }
+
             }
-            await sdk.metaMaskConnect()
 
+
+            setWallet(result.walletName)
+            setCurrentChain(result.chainId)
+            setAccount(result?.address)
         } catch (e) {
             console.error(e)
-            alert(e)
         }
     }
     const getProvider = () => {

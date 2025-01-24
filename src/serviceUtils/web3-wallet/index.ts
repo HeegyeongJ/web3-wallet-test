@@ -1,7 +1,17 @@
 import {Eip712TypedData, Web3} from "web3";
-import {ChainInfo, DetectedWalletList} from "./index.type";
+import {Account, Address, ChainInfo, DetectedWalletList, Wallet} from "./index.type";
+import {MetaMaskSDK} from "@metamask/sdk";
+import {checkPlatform} from "../platformUtils";
 
 const web3 = new Web3();
+
+const MMSDK = new MetaMaskSDK({
+    dappMetadata: {
+        name: "",
+        url: 'http://192.168.0.31:3000',
+    },
+});
+
 
 // EVM 기반의 MetaMask, Coinbase, Trust wallet을 바탕으로 만든 모듈
 class Web3EthereumWallet {
@@ -11,23 +21,12 @@ class Web3EthereumWallet {
         address: null | string;
     }
     chainId: null | string;
-    onAccountChanged: (account: string) => void
+    onAccountChanged: (address: string) => void
     onChainChanged: (chain: string) => void
 
 
     constructor() {
-        this.walletName = null;
-        this.web3 = null;
-        this.account = {
-            address: null,
-        };
-        this.chainId = null;
-        this.onAccountChanged = (account: string) => {
-            this.account.address = account
-        }
-        this.onChainChanged = (chain: string) => {
-            this.chainId = chain
-        }
+        this.initialize()
     }
 
     async getAvailableWallets() {
@@ -47,6 +46,12 @@ class Web3EthereumWallet {
             address: null,
         };
         this.chainId = null;
+        this.onAccountChanged = (address: string) => {
+            this.account.address = address
+        }
+        this.onChainChanged = (chain: string) => {
+            this.chainId = chain
+        }
     }
 
     private detectAccountChanged() {
@@ -63,16 +68,27 @@ class Web3EthereumWallet {
         })
     }
 
-    async connect(wallet: DetectedWalletList) {
+
+    async connect(wallet: Wallet) {
+        const platform = checkPlatform();
+        let selectedWallet;
+        if (platform === 'pc') {
+            const availableWallets = await this.getAvailableWallets()
+            selectedWallet = availableWallets.find(wallets => wallets.info.name.includes(wallet))
+            if (!selectedWallet) {
+                throw new Error(`Wallet not found`)
+            }
+        } else {
+            selectedWallet = {provider: MMSDK.getProvider()}
+        }
         try {
-            this.web3 = new Web3(wallet.provider)
+            this.web3 = new Web3(selectedWallet.provider)
             if (this.web3) {
-                const result = await this.web3?.eth.requestAccounts() as string[]
+                const account: Account = await this.web3?.eth.requestAccounts() as Address[]
                 const chainId = await this.web3?.eth.getChainId()
                 this.chainId = web3.utils.toHex(chainId)
-                this.walletName = wallet.info.name
-                this.account.address = result[0];
-                console.log(result[0])
+                this.walletName = wallet
+                this.account.address = account[0];
                 this.detectAccountChanged()
                 this.detectChainChanged()
                 return {
@@ -85,20 +101,21 @@ class Web3EthereumWallet {
             throw new Error('failed to initialize web3')
         } catch (e: any) {
             if (e?.error?.code === -32603) {
-                alert('지갑 생성 필요')
+                throw new Error('need to make a address first')
             }
+            console.log(e)
             throw e
         }
     }
 
-    async disconnect() {
+    async disconnect(address: string) {
         if (this.web3) {
             try {
                 await this.web3?.provider?.request({
                     method: "wallet_revokePermissions",
                     params: [
                         {
-                            eth_accounts: this.account.address
+                            eth_accounts: address
                         }
                     ],
                 })
@@ -118,6 +135,7 @@ class Web3EthereumWallet {
     }
 
     async sendTransaction(txParams: {
+        from: string;
         to?: string;
         value?: number | string;
         gas?: number;
@@ -127,27 +145,28 @@ class Web3EthereumWallet {
         chainId?: bigint
     }) {
         try {
-            return await this.web3?.eth.sendTransaction({from: this.account.address, ...txParams});
+            return await this.web3?.eth.sendTransaction(txParams);
         } catch (e) {
             console.error(e)
             throw e
         }
     }
 
-    async deployContract(contractABI: any, contractBytecode: string) {
+    async deployContract(request: { contractABI: any, contractBytecode: string, fromAddress: string }) {
         if (this.web3) {
             try {
+                const {contractABI, contractBytecode, fromAddress} = request
                 const contract = new this.web3.eth.Contract(contractABI)
                 const contractDeployer = contract.deploy({
                     data: contractBytecode,
                 })
 
                 const gas = await contractDeployer.estimateGas({
-                    from: this.account.address as string,
+                    from: fromAddress,
                 })
 
                 const tx = await contractDeployer.send({
-                    from: this.account.address as string,
+                    from: fromAddress,
                     gas: gas.toString()
                 })
                 return tx
@@ -160,6 +179,7 @@ class Web3EthereumWallet {
     }
 
     async callERC20ContractMethod(contractInfo: {
+        fromAddress: string,
         contractABI: any,
         contractAddress: string,
         method: string,
@@ -168,14 +188,14 @@ class Web3EthereumWallet {
     }) {
         if (this.web3) {
             try {
-                const {contractABI, contractAddress, method, amount, toAddress} = contractInfo
+                const {contractABI, contractAddress, method, amount, toAddress, fromAddress} = contractInfo
                 const contract = new this.web3.eth.Contract(contractABI, contractAddress)
 
                 const encodeParameter = contract.methods[method](toAddress, amount).encodeABI();
 
                 const estimatedGas = await this.web3.eth.estimateGas({
                     to: contractAddress,
-                    from: this.account.address as string,
+                    from: fromAddress,
                     data: encodeParameter,
                 });
 
@@ -184,11 +204,9 @@ class Web3EthereumWallet {
                     chainId: this.chainId as string,
                     gas: estimatedGas,
                     data: encodeParameter,
-                    from: this.account.address as string,
+                    from: fromAddress,
                 }
-                console.log(transaction)
                 const sendTransaction = await this.web3.eth.sendTransaction(transaction)
-                console.log('hyhhhhh')
                 return sendTransaction
             } catch (e) {
                 console.error(e)
@@ -212,6 +230,7 @@ class Web3EthereumWallet {
     }
 
     async signTypedData(EIP712TypedData: Eip712TypedData, address: string) {
+        // MetaMask 모바일 지원 안함
         if (this.web3) {
             try {
                 return await this.web3?.eth.signTypedData(address, EIP712TypedData)

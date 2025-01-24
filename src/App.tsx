@@ -5,8 +5,10 @@ import {Web3} from "web3";
 import {Account} from "viem";
 import {web3EthereumWallet} from "./serviceUtils/web3-wallet";
 import MetaMask from "./components/MetaMask";
-import Coinbase from "./components/Coinbase";
 import {eip712, USDT_ABI, USDT_CONTRACT_ADDRESS} from "./example";
+import {checkPlatform} from "./serviceUtils/platformUtils";
+import {sdk} from "./sdk";
+import {Wallet} from "./serviceUtils/web3-wallet/index.type";
 
 
 function App() {
@@ -49,7 +51,7 @@ function App() {
                 // await ethereumProvider.request({
                 //     method: "eth_requestAccounts",
                 // })
-                const result = await web3EthereumWallet.connect({info: {name: 'Trust'}, provider: ethereumProvider})
+                const result = await web3EthereumWallet.connect(Wallet.trust)
                 setCurrentChain(result.chainId)
                 setWallet(result.walletName)
                 setAccount(result.address)
@@ -102,7 +104,13 @@ function App() {
             //
             //     await web3.currentProvider.disconnect()
             // }
-            await web3EthereumWallet.disconnect()
+            const platform = checkPlatform()
+            if (platform === 'mobile') {
+                await sdk.metaMaskDisconnect()
+            } else {
+
+                await web3EthereumWallet.disconnect(account)
+            }
             // const result = await provider.request({
             //     method: "wallet_revokePermissions",
             //     params: [
@@ -138,6 +146,7 @@ function App() {
                 setBalance('none')
                 return
             }
+            alert(result)
             setBalance(new Web3().utils.fromWei(result, 'ether'))
         } catch (e) {
             console.error(e)
@@ -258,21 +267,25 @@ function App() {
             }
         ];
         try {
-            const tx = await web3EthereumWallet.deployContract(abi, contractBytecode)
+            const tx = await web3EthereumWallet.deployContract({
+                contractABI: abi,
+                contractBytecode: contractBytecode,
+                fromAddress: account
+            })
             console.log(tx)
         } catch (e) {
             console.error(e)
-            alert(e.error.message)
         }
     }
 
     const sendUSDT = async () => {
         const contractInfo = {
-            toAddress: "0x51F6661CAB4553d8434F005E06314A5cD4d00A27",
+            toAddress: "0xbf7D708184a222b35C5309Ad6dd728cBF85c1849",
             contractABI: USDT_ABI,
             contractAddress: USDT_CONTRACT_ADDRESS,
             amount: amount * 10 ** 6,
-            method: 'transfer'
+            method: 'transfer',
+            fromAddress: account,
         }
         const result = await web3EthereumWallet.callERC20ContractMethod(contractInfo)
         console.log(result)
@@ -282,9 +295,11 @@ function App() {
     }
 
     const sendTransaction = async () => {
+
         const tx = {
             to: '0x51F6661CAB4553d8434F005E06314A5cD4d00A27',
-            value: '0x0'
+            value: '0x0',
+            from: account
         }
         const result = await web3EthereumWallet.sendTransaction(tx)
         console.log(result)
@@ -371,7 +386,7 @@ function App() {
             </div>
             <div>
                 <button onClick={() => sendTransaction()}>send transaction</button>
-                <button onClick={() => signTypedData()}>sign typed data in ethereum</button>
+                <button onClick={() => signTypedData()}>sign typed data for ethereum mainnet</button>
             </div>
         </div>
     );

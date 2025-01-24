@@ -5,6 +5,9 @@ export const sdk = {
     metaMaskConnect: async () => {
         return await MMSDK.connect();
     },
+    metaMaskDisconnect: async () => {
+        return await MMSDK.terminate();
+    },
     getMetaMaskProviderFromSDK: () => {
         return MMSDK.getProvider();
     },

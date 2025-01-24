@@ -1,19 +1,26 @@
+const express = require('express');
 const https = require('https');
 const fs = require('fs');
-const server = require('express');
+const path = require('path');
 
-const app = server();
+const app = express();
+const PORT = 443; // HTTPS 포트
 
-const options = {
-    key: fs.readFileSync('./localhost-key.pem'),
-    cert: fs.readFileSync('./localhost.pem'),
+// SSL 인증서 로드
+const sslOptions = {
+    key: fs.readFileSync('./localhost-key.pem'), // 키 파일
+    cert: fs.readFileSync('./localhost.pem'),   // 인증서 파일
 };
 
-app.get('/', (req, res) => {
-    res.send('Hello, HTTPS!');
+// React 정적 파일 제공
+app.use(express.static(path.join(__dirname, 'build')));
+
+// React의 index.html 반환
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 
-https.createServer(options, app).listen(443, () => {
-    console.log('Server is running on https://localhost:3000');
+// HTTPS 서버 실행
+https.createServer(sslOptions, app).listen(PORT, () => {
+    console.log(`HTTPS Server is running at https://localhost:${PORT}`);
 });
-

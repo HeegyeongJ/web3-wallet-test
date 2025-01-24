@@ -45,3 +45,12 @@ export type ChainInfo = {
     blockExplorerUrls?: string[]
     iconUrls?: string[]
 }
+
+export const enum Wallet {
+    trust = 'Trust',
+    metamask = 'MetaMask'
+}
+
+export type Address = string;
+
+export type Account = Address[];
